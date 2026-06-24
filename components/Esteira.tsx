@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import {
+  type DiaGroup,
   type ReceitaGroup,
   type Situacao,
+  type Turno,
   situacaoLabel,
   turnoLabel,
+  turnoTitulo,
+  formatarData,
   etapaAtual,
 } from "@/lib/parser";
 
 interface Props {
-  grupos: ReceitaGroup[];
+  dias: DiaGroup[];
 }
 
 const SITUACOES: { value: Situacao | "ALL"; label: string }[] = [
@@ -21,68 +25,81 @@ const SITUACOES: { value: Situacao | "ALL"; label: string }[] = [
   { value: "PO", label: "Ocorrência" },
 ];
 
+const FILIAL_CLASSES: Record<string, string> = {
+  AMERICO: "bg-violet-100 text-violet-700",
+  MOEMA:   "bg-teal-100   text-teal-700",
+};
+
 function situacaoBadgeClasses(s: Situacao): string {
   return {
-    CF: "bg-green-100 text-green-700 border-green-200",
-    AT: "bg-red-600 text-white border-red-600",
-    BA: "bg-blue-100 text-blue-700 border-blue-200",
+    CF: "bg-green-100  text-green-700  border-green-200",
+    AT: "bg-red-600    text-white       border-red-600",
+    BA: "bg-blue-100   text-blue-700   border-blue-200",
     PO: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "?": "bg-gray-100 text-gray-500 border-gray-200",
+    "?": "bg-gray-100  text-gray-500   border-gray-200",
   }[s];
 }
 
-function situacaoCardClasses(s: Situacao): string {
+function situacaoCardBorder(s: Situacao): string {
   return {
-    CF: "border-green-200 bg-white",
-    AT: "border-red-400 bg-red-50",
-    BA: "border-blue-200 bg-white",
-    PO: "border-yellow-200 bg-white",
-    "?": "border-gray-200 bg-white",
+    CF:  "border-green-200  bg-white",
+    AT:  "border-red-400    bg-red-50",
+    BA:  "border-blue-200   bg-white",
+    PO:  "border-yellow-200 bg-white",
+    "?": "border-gray-200   bg-white",
   }[s];
 }
 
 function situacaoLeftBar(s: Situacao): string {
   return {
-    CF: "bg-green-400",
-    AT: "bg-red-500",
-    BA: "bg-blue-400",
-    PO: "bg-yellow-400",
+    CF:  "bg-green-400",
+    AT:  "bg-red-500",
+    BA:  "bg-blue-400",
+    PO:  "bg-yellow-400",
     "?": "bg-gray-300",
   }[s];
 }
 
-export default function Esteira({ grupos }: Props) {
+export default function Esteira({ dias }: Props) {
   const [filtroSit, setFiltroSit] = useState<Situacao | "ALL">("ALL");
   const [filtroFilial, setFiltroFilial] = useState("ALL");
   const [busca, setBusca] = useState("");
 
-  const filiais = Array.from(new Set(grupos.map((g) => g.empNome))).sort();
-
-  const filtrados = grupos.filter((g) => {
-    if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
-    if (filtroFilial !== "ALL" && g.empNome !== filtroFilial) return false;
-    if (busca) {
-      const q = busca.toLowerCase();
-      if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
-    }
-    return true;
-  });
+  // Coleta totais e lista de filiais de todos os dias
+  const todosGrupos = dias.flatMap((d) => d.turnos.flatMap((t) => t.receitas));
+  const filiais = Array.from(new Set(todosGrupos.map((g) => g.empNome).filter(Boolean))).sort();
 
   const contagens = {
-    CF: grupos.filter((g) => g.situacao === "CF").length,
-    AT: grupos.filter((g) => g.situacao === "AT").length,
-    BA: grupos.filter((g) => g.situacao === "BA").length,
-    PO: grupos.filter((g) => g.situacao === "PO").length,
+    CF: todosGrupos.filter((g) => g.situacao === "CF").length,
+    AT: todosGrupos.filter((g) => g.situacao === "AT").length,
+    BA: todosGrupos.filter((g) => g.situacao === "BA").length,
+    PO: todosGrupos.filter((g) => g.situacao === "PO").length,
   };
 
+  function filtrar(grupos: ReceitaGroup[]): ReceitaGroup[] {
+    return grupos.filter((g) => {
+      if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
+      if (filtroFilial !== "ALL" && g.empNome !== filtroFilial) return false;
+      if (busca) {
+        const q = busca.toLowerCase();
+        if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  const totalFiltrado = dias.flatMap((d) =>
+    d.turnos.flatMap((t) => filtrar(t.receitas))
+  ).length;
+
   return (
-    <div className="space-y-4">
-      {/* Sumário */}
+    <div className="space-y-5">
+      {/* Contadores */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Contador label="Conforme"       valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200" />
-        <Contador label="Atraso"         valor={contagens.AT} cor="text-orange-600" bg="bg-orange-50 border-orange-200" />
-        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"  bg="bg-blue-50   border-blue-200" />
-        <Contador label="Ocorrência"     valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" />
+        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200" />
+        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200" />
+        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200" />
+        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" />
       </div>
 
       {/* Filtros */}
@@ -116,26 +133,73 @@ export default function Esteira({ grupos }: Props) {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400 bg-white"
           >
             <option value="ALL">Todas as filiais</option>
-            {filiais.map((f) => (
-              <option key={f} value={f}>{f}</option>
-            ))}
+            {filiais.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         )}
         <span className="text-gray-400 text-sm ml-auto">
-          {filtrados.length} receita{filtrados.length !== 1 ? "s" : ""}
+          {totalFiltrado} receita{totalFiltrado !== 1 ? "s" : ""}
         </span>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtrados.map((g) => (
-          <ReceitaCard key={g.recId} grupo={g} />
-        ))}
-      </div>
+      {/* Seções por dia e turno */}
+      {dias.map((dia) => {
+        const turnosFiltrados = dia.turnos
+          .map((t) => ({ ...t, receitas: filtrar(t.receitas) }))
+          .filter((t) => t.receitas.length > 0);
 
-      {filtrados.length === 0 && (
+        if (turnosFiltrados.length === 0) return null;
+
+        return (
+          <div key={dia.data}>
+            {/* Cabeçalho do dia */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`px-3 py-1 rounded-lg text-sm font-semibold ${
+                dia.isHoje
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}>
+                {dia.isHoje ? "Hoje" : ""}
+                {!dia.isHoje && formatarData(dia.data)}
+              </div>
+              {dia.isHoje && (
+                <span className="text-gray-500 text-sm">{formatarData(dia.data)}</span>
+              )}
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Turnos do dia */}
+            <div className="space-y-4">
+              {turnosFiltrados.map((turnoGrp) => (
+                <div key={turnoGrp.turno}>
+                  <TurnoCabecalho turno={turnoGrp.turno} total={turnoGrp.receitas.length} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
+                    {turnoGrp.receitas.map((g) => (
+                      <ReceitaCard key={g.recId} grupo={g} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {totalFiltrado === 0 && (
         <p className="text-center text-gray-400 py-12 text-sm">Nenhuma receita encontrada.</p>
       )}
+    </div>
+  );
+}
+
+function TurnoCabecalho({ turno, total }: { turno: Turno; total: number }) {
+  const icon = turno === "manha" ? "🌅" : turno === "tarde" ? "🌇" : "⏳";
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-500 font-medium">
+        {icon} {turnoTitulo(turno)}
+      </span>
+      <span className="text-xs text-gray-400">· {total} receita{total !== 1 ? "s" : ""}</span>
+      <div className="flex-1 h-px bg-gray-100" />
     </div>
   );
 }
@@ -151,30 +215,40 @@ function Contador({ label, valor, cor, bg }: { label: string; valor: number; cor
 
 function ReceitaCard({ grupo }: { grupo: ReceitaGroup }) {
   const [aberto, setAberto] = useState(false);
+  const filialCls = FILIAL_CLASSES[grupo.empNome] ?? "bg-gray-100 text-gray-600";
 
   return (
-    <div className={`rounded-xl border shadow-sm overflow-hidden ${situacaoCardClasses(grupo.situacao)}`}>
-      {/* Barra lateral colorida */}
+    <div className={`rounded-xl border shadow-sm overflow-hidden ${situacaoCardBorder(grupo.situacao)}`}>
       <div className="flex">
         <div className={`w-1 shrink-0 ${situacaoLeftBar(grupo.situacao)}`} />
         <div className="flex-1 min-w-0">
-          {/* Cabeçalho */}
-          <div className="px-4 pt-4 pb-3">
+
+          {/* Cabeçalho do card */}
+          <div className="px-4 pt-3 pb-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs text-gray-400 font-mono">#{grupo.recId}</p>
                 <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{grupo.cliente}</p>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full border shrink-0 font-medium ${situacaoBadgeClasses(grupo.situacao)}`}>
-                {situacaoLabel(grupo.situacao)}
-              </span>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${situacaoBadgeClasses(grupo.situacao)}`}>
+                  {situacaoLabel(grupo.situacao)}
+                </span>
+                {grupo.semInicio && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                    Sem início
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-              <span>📍 {grupo.empNome || "—"}</span>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+              <span className={`px-1.5 py-0.5 rounded font-medium text-xs ${filialCls}`}>
+                {grupo.empNome || "—"}
+              </span>
               <span>👤 {grupo.vendedor || "—"}</span>
-              <span>🕐 {turnoLabel(grupo.horaPrev)} · {grupo.dtaPrev}</span>
-              <span className="text-gray-700 font-semibold">
+              <span>🕐 {turnoLabel(grupo.horaPrev)}</span>
+              <span className="text-gray-700 font-semibold ml-auto">
                 R$ {grupo.totalValor.toFixed(2).replace(".", ",")}
               </span>
             </div>
@@ -187,7 +261,7 @@ function ReceitaCard({ grupo }: { grupo: ReceitaGroup }) {
             ))}
           </div>
 
-          {/* Expandir responsáveis */}
+          {/* Responsáveis */}
           {grupo.formulas.some((f) => f.usrConf || f.usrLab || f.usrBal) && (
             <button
               onClick={() => setAberto(!aberto)}
@@ -234,34 +308,22 @@ function FormulaProgresso({ formula }: { formula: import("@/lib/parser").Receita
             <div key={e} className="flex items-center gap-1 flex-1 min-w-0">
               <div
                 className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  done
-                    ? "bg-green-400"
-                    : active
-                    ? "bg-blue-400"
-                    : "bg-gray-200"
+                  done ? "bg-green-400" : active ? "bg-blue-400" : "bg-gray-200"
                 }`}
               />
               {i === ETAPA_ORDER.length - 1 && (
-                <div
-                  className={`w-2 h-2 rounded-full shrink-0 ${
-                    etapa === "pronto" ? "bg-green-400" : "bg-gray-200"
-                  }`}
-                />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${etapa === "pronto" ? "bg-green-400" : "bg-gray-200"}`} />
               )}
             </div>
           );
         })}
       </div>
       <p className="text-xs text-gray-400 mt-0.5">
-        {etapa === "pronto"
-          ? "✓ No balcão"
-          : etapa === "balcao"
-          ? "Aguardando balcão"
-          : etapa === "lab"
-          ? "Em laboratório"
-          : etapa === "conf"
-          ? "Aguardando conferência"
-          : "Aguardando início"}
+        {etapa === "pronto"   ? "✓ No balcão"
+        : etapa === "balcao"  ? "Aguardando balcão"
+        : etapa === "lab"     ? "Em laboratório"
+        : etapa === "conf"    ? "Aguardando conferência"
+        :                       "Aguardando início"}
       </p>
     </div>
   );

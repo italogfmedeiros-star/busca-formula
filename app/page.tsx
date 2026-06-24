@@ -3,10 +3,10 @@
 import { useState } from "react";
 import UploadArea from "@/components/UploadArea";
 import Esteira from "@/components/Esteira";
-import { parseCSV, groupReceitas, type ReceitaGroup } from "@/lib/parser";
+import { parseCSV, groupReceitas, groupPorDia, hojeCSV, type DiaGroup } from "@/lib/parser";
 
 export default function Home() {
-  const [grupos, setGrupos] = useState<ReceitaGroup[]>([]);
+  const [dias, setDias] = useState<DiaGroup[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,8 @@ export default function Home() {
       try {
         const text = e.target?.result as string;
         const receitas = parseCSV(text);
-        setGrupos(groupReceitas(receitas));
+        const grupos = groupReceitas(receitas);
+        setDias(groupPorDia(grupos, hojeCSV()));
         setTotal(receitas.length);
         setFileName(file.name);
       } catch {
@@ -49,7 +50,7 @@ export default function Home() {
           </div>
         )}
 
-        {grupos.length > 0 && <Esteira grupos={grupos} />}
+        {dias.length > 0 && <Esteira dias={dias} />}
       </div>
     </main>
   );
