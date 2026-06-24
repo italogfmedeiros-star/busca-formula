@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Sidebar, { type View } from "@/components/Sidebar";
 import UploadArea from "@/components/UploadArea";
 import Esteira from "@/components/Esteira";
@@ -15,13 +15,65 @@ import {
   type Indicadores,
 } from "@/lib/parser";
 
+const POLL_INTERVAL_MS = 30_000;
+
+function formatarExportacao(iso: string): string {
+  const d = new Date(iso);
+  const dd   = String(d.getDate()).padStart(2, "0");
+  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh   = String(d.getHours()).padStart(2, "0");
+  const min  = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} às ${hh}:${min}`;
+}
+
 export default function Home() {
   const [view, setView] = useState<View>("upload");
   const [dias, setDias] = useState<DiaGroup[]>([]);
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [exportedAt, setExportedAt] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [autoAtivo, setAutoAtivo] = useState(false);
+
+  const carregarDaAPI = useCallback(async (exportedAtAtual?: string) => {
+    try {
+      const res = await fetch("/api/receitas");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Só atualiza se for um relatório mais novo
+      if (exportedAtAtual && data.exportedAt <= exportedAtAtual) return;
+
+      setDias(data.dias);
+      setIndicadores(data.indicadores);
+      setTotal(data.totalReceitas);
+      setFileName(data.fileName);
+      setExportedAt(data.exportedAt);
+      setAutoAtivo(true);
+      setView((v) => v === "upload" ? "dashboard" : v);
+    } catch {
+      // API indisponível (ex: Vercel sem watcher) — ignora silenciosamente
+    }
+  }, []);
+
+  // Tenta carregar da API ao iniciar
+  useEffect(() => {
+    carregarDaAPI();
+  }, [carregarDaAPI]);
+
+  // Polling a cada 30s quando o watcher está ativo
+  useEffect(() => {
+    if (!autoAtivo) return;
+    const id = setInterval(() => {
+      setExportedAt((atual) => {
+        carregarDaAPI(atual ?? undefined);
+        return atual;
+      });
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [autoAtivo, carregarDaAPI]);
 
   function handleFile(file: File) {
     setError(null);
@@ -35,6 +87,7 @@ export default function Home() {
         setIndicadores(calcularIndicadores(grupos));
         setTotal(receitas.length);
         setFileName(file.name);
+        setExportedAt(null);
         setView("dashboard");
       } catch {
         setError("Erro ao processar o arquivo. Verifique se é um CSV exportado pelo ERP.");
@@ -97,7 +150,13 @@ export default function Home() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
                 {fileName && (
-                  <p className="text-sm text-gray-400 mt-0.5">{fileName} · {total} fórmulas</p>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    {total} fórmulas
+                    {exportedAt
+                      ? <span className="ml-2 text-green-600">· Exportado em {formatarExportacao(exportedAt)}</span>
+                      : <span className="ml-1 text-gray-400">· {fileName}</span>
+                    }
+                  </p>
                 )}
               </div>
             </div>
@@ -119,6 +178,11 @@ export default function Home() {
               )}
             </div>
 
+            {exportedAt && (
+              <p className="text-sm text-gray-400">
+                Exportado em {formatarExportacao(exportedAt)}
+              </p>
+            )}
             {indicadores
               ? <PainelIndicadores dados={indicadores} />
               : <EmptyState onUpload={() => setView("upload")} />
