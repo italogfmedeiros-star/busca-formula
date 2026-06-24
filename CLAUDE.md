@@ -64,7 +64,7 @@ Relatório **"Controle Interno"** exportado do ERP em formato CSV.
 | `CLI_RAZAO` | Nome do cliente |
 | `REC_VL_FINAL` | Valor da fórmula em R$ |
 | `REC_DTA_ENT` | Data de previsão de entrega |
-| `REC_HORA_ENT` | Turno de entrega (8=manhã, 14=tarde — não é horário literal) |
+| `REC_HORA_ENT` | **Modal de expedição** (não é horário): 8=Entrega Motoboy, 11=Azul Cargo, 12=SEDEX, 14=Retirada no Balcão, 0=Sem horário |
 | `CONF` / `CONF_HORA` / `USR_CONF` | Conferência Farmacêutica: data, hora, responsável |
 | `LABOR` / `LAB_HORA` / `USR_LAB` | Laboratório: data, hora, responsável |
 | `BALCAO` / `BAL_HORA` / `USR_BAL` | Balcão: data, hora, responsável |
@@ -88,20 +88,27 @@ Relatório **"Controle Interno"** exportado do ERP em formato CSV.
 ### Fluxo de Produção
 
 ```
-Receita entra
+Receita entra (andar de baixo)
       ↓
-[CONFERÊNCIA FARMACÊUTICA]  →  CONF + CONF_HORA + USR_CONF
-      ↓
-[LABORATÓRIO]               →  LABOR + LAB_HORA + USR_LAB
-      ↓
-[BALCÃO]                    →  BALCAO + BAL_HORA + USR_BAL
+[CONFERÊNCIA FARMACÊUTICA]  →  CONF + CONF_HORA + USR_CONF   (andar de baixo)
+      ↓  farmacêutico confere e libera para o lab
+[LABORATÓRIO / MANIPULAÇÃO] →  LABOR + LAB_HORA + USR_LAB    (andar de cima)
+      ↓  fórmula pronta, responsável confere saída
+[BALCÃO / EXPEDIÇÃO]        →  BALCAO + BAL_HORA + USR_BAL   (andar de baixo)
 ```
 
 Campo vazio = etapa ainda não concluída.
 
+**Estados de gargalo:**
+- Sem `CONF` → "Aguardando Conferência" (andar de baixo, ainda na entrada)
+- Com `CONF`, sem `LABOR` → "Em Laboratório" (andar de cima, em manipulação)
+- Com `LABOR`, sem `BALCAO` → "Aguardando Balcão" (desceu do lab, aguarda expedição)
+
 ---
 
-## O que foi implementado (MVP)
+## O que foi implementado
+
+### MVP
 
 - [x] Upload de CSV por drag-and-drop ou clique
 - [x] Parser do relatório Controle Interno (encoding latin1, separador `;`)
@@ -115,37 +122,43 @@ Campo vazio = etapa ainda não concluída.
 - [x] Tema claro fixo (sem dependência do modo escuro do sistema)
 - [x] Deploy na Vercel
 
----
+### V1 — Dashboard Operacional ✅ Concluído
 
-## Próximos Passos
+- [x] Agrupar receitas por modal de expedição (Motoboy / Azul / SEDEX / Retirada / Sem horário)
+- [x] Ordenar por urgência dentro de cada grupo (AT → BA → PO → CF)
+- [x] Destacar receitas do dia atual vs. dias futuros
+- [x] Separador visual por data de previsão
+- [x] Indicador de receitas sem nenhuma etapa iniciada ("Sem início")
+- [x] Distinção visual entre filiais AMERICO e MOEMA
 
-### V1 — Dashboard Operacional
+### V2 — Indicadores de Produção ✅ Concluído
 
-- [ ] Agrupar receitas por turno de entrega (Manhã / Tarde)
-- [ ] Ordenar por urgência: receitas com prazo mais próximo primeiro
-- [ ] Destacar receitas do dia atual vs. dias futuros
-- [ ] Separador visual por data de previsão
-- [ ] Indicador de receitas sem nenhuma etapa iniciada (paradas)
-- [ ] Distinção visual entre filiais AMERICO e MOEMA
+- [x] Tempo médio por etapa (conf→lab, lab→balcão)
+- [x] Gargalo: etapa com mais receitas paradas
+- [x] Volume por vendedor/atendente
+- [x] Volume por filial
+- [x] Taxa de atraso do dia
 
-### V2 — Indicadores de Produção
+### V3 — Alertas ✅ Concluído
 
-- [ ] Tempo médio por etapa (entrada → conf, conf → lab, lab → balcão)
-- [ ] Gargalos: etapa com mais receitas paradas
-- [ ] Volume por vendedor/atendente
-- [ ] Volume por filial
-- [ ] Taxa de atraso do dia
+- [x] Badges de alerta por receita (Crítica / Em risco / Conf. parada / Lab parado)
+- [x] Ring vermelho pulsante em receitas críticas
+- [x] Filtro "Em risco" no dashboard
+- [x] Contador de receitas em alerta nos indicadores
 
-### V3 — Alertas
+> **Limites de alerta FICTÍCIOS — validar com gestor:**
+> - Conferência parada: `LIMITE_CONF_H = 2h` (lib/parser.ts)
+> - Laboratório parado: `LIMITE_LAB_H = 4h` (lib/parser.ts)
 
-- [ ] Destacar receitas que ultrapassaram X horas em uma etapa
-- [ ] Notificação visual de receitas críticas
-- [ ] Filtro "em risco" (próximas do prazo e sem etapas concluídas)
+### V4 — Integração com ERP (em andamento)
 
-### V4 — Integração com ERP
-
-- [ ] Conexão direta (sem necessidade de exportar manualmente)
-- [ ] Atualização automática dos dados
+- [x] Watcher de pasta com chokidar (lib/watcher.ts)
+- [x] Inicialização automática via instrumentation.ts
+- [x] API Route GET /api/receitas com cache em memória
+- [x] Polling a cada 30s no frontend
+- [x] Exibição do timestamp de exportação (extraído do nome do arquivo)
+- [ ] Configurar `PASTA_RELATORIOS` no servidor e instalar Node.js
+- [ ] V4-SQL: query direta ao banco do ERP via `mssql` (requer acesso VPN ao SQL Server)
 
 ---
 
