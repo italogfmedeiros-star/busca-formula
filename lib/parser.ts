@@ -194,6 +194,114 @@ export function groupPorDia(grupos: ReceitaGroup[], hoje: string): DiaGroup[] {
   });
 }
 
+// ─── Indicadores V2 ─────────────────────────────────────────────────────────
+
+export interface Indicadores {
+  totalReceitas: number;
+  taxaAtraso: number;           // % do total com situação AT
+  gargalo: { etapa: string; quantidade: number } | null;
+  tempoMedioConfLab: number | null;   // horas entre conf e lab
+  tempoMedioLabBalcao: number | null; // horas entre lab e balcão
+  porVendedor: { nome: string; total: number; atraso: number }[];
+  porFilial: { nome: string; total: number; atraso: number }[];
+}
+
+function parseDatetime(data: string, hora: string): Date | null {
+  // data: MM/DD/YY, hora: HH:MM
+  if (!data || !hora) return null;
+  const dp = data.split("/");
+  const hp = hora.split(":");
+  if (dp.length !== 3 || hp.length !== 2) return null;
+  const year  = 2000 + parseInt(dp[2]);
+  const month = parseInt(dp[0]) - 1;
+  const day   = parseInt(dp[1]);
+  const h     = parseInt(hp[0]);
+  const m     = parseInt(hp[1]);
+  if ([year, month, day, h, m].some(isNaN)) return null;
+  return new Date(year, month, day, h, m);
+}
+
+function diffHoras(a: Date | null, b: Date | null): number | null {
+  if (!a || !b) return null;
+  const diff = (b.getTime() - a.getTime()) / (1000 * 60 * 60);
+  return diff >= 0 ? diff : null;
+}
+
+function mediaNaoNula(vals: (number | null)[]): number | null {
+  const validos = vals.filter((v): v is number => v !== null && v < 48); // ignora outliers > 48h
+  if (validos.length === 0) return null;
+  return validos.reduce((a, b) => a + b, 0) / validos.length;
+}
+
+export function calcularIndicadores(grupos: ReceitaGroup[]): Indicadores {
+  const total = grupos.length;
+  const atrasadas = grupos.filter((g) => g.situacao === "AT").length;
+
+  // Gargalo: etapa onde mais receitas estão paradas
+  let paradas = { entrada: 0, conf: 0, lab: 0 };
+  for (const g of grupos) {
+    for (const f of g.formulas) {
+      if (!f.confData && !f.laborData && !f.balcaoData) paradas.entrada++;
+      else if (f.confData && !f.laborData) paradas.conf++;
+      else if (f.laborData && !f.balcaoData) paradas.lab++;
+    }
+  }
+  const maxParada = Math.max(paradas.entrada, paradas.conf, paradas.lab);
+  let gargalo: Indicadores["gargalo"] = null;
+  if (maxParada > 0) {
+    const etapa =
+      paradas.entrada === maxParada ? "Aguardando Conferência" :
+      paradas.conf    === maxParada ? "Aguardando Laboratório" :
+                                      "Aguardando Balcão";
+    gargalo = { etapa, quantidade: maxParada };
+  }
+
+  // Tempos médios entre etapas (por fórmula individual)
+  const todasFormulas = grupos.flatMap((g) => g.formulas);
+  const temposConfLab    = todasFormulas.map((f) =>
+    diffHoras(parseDatetime(f.confData, f.confHora), parseDatetime(f.laborData, f.laborHora))
+  );
+  const temposLabBalcao  = todasFormulas.map((f) =>
+    diffHoras(parseDatetime(f.laborData, f.laborHora), parseDatetime(f.balcaoData, f.balcaoHora))
+  );
+
+  // Volume por vendedor
+  const vendMap = new Map<string, { total: number; atraso: number }>();
+  for (const g of grupos) {
+    const nome = g.vendedor || "—";
+    if (!vendMap.has(nome)) vendMap.set(nome, { total: 0, atraso: 0 });
+    const v = vendMap.get(nome)!;
+    v.total++;
+    if (g.situacao === "AT") v.atraso++;
+  }
+  const porVendedor = Array.from(vendMap.entries())
+    .map(([nome, v]) => ({ nome, ...v }))
+    .sort((a, b) => b.total - a.total);
+
+  // Volume por filial
+  const filialMap = new Map<string, { total: number; atraso: number }>();
+  for (const g of grupos) {
+    const nome = g.empNome || "—";
+    if (!filialMap.has(nome)) filialMap.set(nome, { total: 0, atraso: 0 });
+    const f = filialMap.get(nome)!;
+    f.total++;
+    if (g.situacao === "AT") f.atraso++;
+  }
+  const porFilial = Array.from(filialMap.entries())
+    .map(([nome, f]) => ({ nome, ...f }))
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    totalReceitas: total,
+    taxaAtraso: total > 0 ? (atrasadas / total) * 100 : 0,
+    gargalo,
+    tempoMedioConfLab:    mediaNaoNula(temposConfLab),
+    tempoMedioLabBalcao:  mediaNaoNula(temposLabBalcao),
+    porVendedor,
+    porFilial,
+  };
+}
+
 export function etapaAtual(r: Receita): "entrada" | "conf" | "lab" | "balcao" | "pronto" {
   if (r.balcaoData) return "pronto";
   if (r.laborData) return "balcao";

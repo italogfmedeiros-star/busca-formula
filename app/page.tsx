@@ -3,10 +3,12 @@
 import { useState } from "react";
 import UploadArea from "@/components/UploadArea";
 import Esteira from "@/components/Esteira";
-import { parseCSV, groupReceitas, groupPorDia, hojeCSV, type DiaGroup } from "@/lib/parser";
+import PainelIndicadores from "@/components/Indicadores";
+import { parseCSV, groupReceitas, groupPorDia, calcularIndicadores, hojeCSV, type DiaGroup, type Indicadores } from "@/lib/parser";
 
 export default function Home() {
   const [dias, setDias] = useState<DiaGroup[]>([]);
+  const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +22,7 @@ export default function Home() {
         const receitas = parseCSV(text);
         const grupos = groupReceitas(receitas);
         setDias(groupPorDia(grupos, hojeCSV()));
+        setIndicadores(calcularIndicadores(grupos));
         setTotal(receitas.length);
         setFileName(file.name);
       } catch {
@@ -50,6 +53,7 @@ export default function Home() {
           </div>
         )}
 
+        {indicadores && <PainelIndicadores dados={indicadores} />}
         {dias.length > 0 && <Esteira dias={dias} />}
       </div>
     </main>
