@@ -66,6 +66,7 @@ export default function Esteira({ dias }: Props) {
   const [filtroSit, setFiltroSit] = useState<Situacao | "ALL">("ALL");
   const [filtroFilial, setFiltroFilial] = useState("ALL");
   const [filtroAlerta, setFiltroAlerta] = useState(false);
+  const [filtroMotoboy, setFiltroMotoboy] = useState("ALL");
   const [busca, setBusca] = useState("");
 
   // Coleta totais e lista de filiais de todos os dias
@@ -81,11 +82,19 @@ export default function Esteira({ dias }: Props) {
 
   const totalEmRisco = todosGrupos.filter((g) => g.alertas.length > 0).length;
 
+  const contagensMotoboy = {
+    V: todosGrupos.filter((g) => g.motoboys.includes("V")).length,
+    A: todosGrupos.filter((g) => g.motoboys.includes("A")).length,
+    L: todosGrupos.filter((g) => g.motoboys.includes("L")).length,
+  };
+  const temExpedicao = contagensMotoboy.V + contagensMotoboy.A + contagensMotoboy.L > 0;
+
   function filtrar(grupos: ReceitaGroup[]): ReceitaGroup[] {
     return grupos.filter((g) => {
       if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
       if (filtroFilial !== "ALL" && g.empNome !== filtroFilial) return false;
       if (filtroAlerta && g.alertas.length === 0) return false;
+      if (filtroMotoboy !== "ALL" && !g.motoboys.includes(filtroMotoboy)) return false;
       if (busca) {
         const q = busca.toLowerCase();
         if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
@@ -100,14 +109,26 @@ export default function Esteira({ dias }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Contadores */}
+      {/* Contadores de situação */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200"  activeBg="bg-green-600"  isActive={filtroSit === "CF"}  onClick={() => { setFiltroSit(filtroSit === "CF" ? "ALL" : "CF"); setFiltroAlerta(false); }} />
-        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200"    activeBg="bg-red-600"    isActive={filtroSit === "AT"}  onClick={() => { setFiltroSit(filtroSit === "AT" ? "ALL" : "AT"); setFiltroAlerta(false); }} />
-        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200"   activeBg="bg-blue-600"   isActive={filtroSit === "BA"}  onClick={() => { setFiltroSit(filtroSit === "BA" ? "ALL" : "BA"); setFiltroAlerta(false); }} />
-        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); }} />
-        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); }} />
+        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200"  activeBg="bg-green-600"  isActive={filtroSit === "CF"}  onClick={() => { setFiltroSit(filtroSit === "CF" ? "ALL" : "CF"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
+        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200"    activeBg="bg-red-600"    isActive={filtroSit === "AT"}  onClick={() => { setFiltroSit(filtroSit === "AT" ? "ALL" : "AT"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
+        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200"   activeBg="bg-blue-600"   isActive={filtroSit === "BA"}  onClick={() => { setFiltroSit(filtroSit === "BA" ? "ALL" : "BA"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
+        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
+        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); setFiltroMotoboy("ALL"); }} />
       </div>
+
+      {/* Contadores de expedição */}
+      {temExpedicao && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Expedição</p>
+          <div className="grid grid-cols-3 gap-3">
+            <Contador label="🛵 Vini"   valor={contagensMotoboy.V} cor="text-indigo-600" bg="bg-indigo-50 border-indigo-200" activeBg="bg-indigo-600" isActive={filtroMotoboy === "V"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "V" ? "ALL" : "V"); setFiltroAlerta(false); }} />
+            <Contador label="🛵 Aldrin" valor={contagensMotoboy.A} cor="text-purple-600" bg="bg-purple-50 border-purple-200" activeBg="bg-purple-600" isActive={filtroMotoboy === "A"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "A" ? "ALL" : "A"); setFiltroAlerta(false); }} />
+            <Contador label="🏪 Loja"   valor={contagensMotoboy.L} cor="text-teal-600"   bg="bg-teal-50   border-teal-200"   activeBg="bg-teal-600"   isActive={filtroMotoboy === "L"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "L" ? "ALL" : "L"); setFiltroAlerta(false); }} />
+          </div>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
