@@ -82,19 +82,13 @@ export default function Esteira({ dias }: Props) {
 
   const totalEmRisco = todosGrupos.filter((g) => g.alertas.length > 0).length;
 
-  const contagensMotoboy = {
-    V: todosGrupos.filter((g) => g.motoboys.includes("V")).length,
-    A: todosGrupos.filter((g) => g.motoboys.includes("A")).length,
-    L: todosGrupos.filter((g) => g.motoboys.includes("L")).length,
-  };
-  const temExpedicao = contagensMotoboy.V + contagensMotoboy.A + contagensMotoboy.L > 0;
-
   function filtrar(grupos: ReceitaGroup[]): ReceitaGroup[] {
     return grupos.filter((g) => {
       if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
       if (filtroFilial !== "ALL" && g.empNome !== filtroFilial) return false;
       if (filtroAlerta && g.alertas.length === 0) return false;
-      if (filtroMotoboy !== "ALL" && !g.motoboys.includes(filtroMotoboy)) return false;
+      if (filtroMotoboy === "OUTROS" && g.motoboys.length > 0) return false;
+      if (filtroMotoboy !== "ALL" && filtroMotoboy !== "OUTROS" && !g.motoboys.includes(filtroMotoboy)) return false;
       if (busca) {
         const q = busca.toLowerCase();
         if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
@@ -117,18 +111,6 @@ export default function Esteira({ dias }: Props) {
         <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
         <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); setFiltroMotoboy("ALL"); }} />
       </div>
-
-      {/* Contadores de expedição */}
-      {temExpedicao && (
-        <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Expedição</p>
-          <div className="grid grid-cols-3 gap-3">
-            <Contador label="🛵 Vini"   valor={contagensMotoboy.V} cor="text-indigo-600" bg="bg-indigo-50 border-indigo-200" activeBg="bg-indigo-600" isActive={filtroMotoboy === "V"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "V" ? "ALL" : "V"); setFiltroAlerta(false); }} />
-            <Contador label="🛵 Aldrin" valor={contagensMotoboy.A} cor="text-purple-600" bg="bg-purple-50 border-purple-200" activeBg="bg-purple-600" isActive={filtroMotoboy === "A"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "A" ? "ALL" : "A"); setFiltroAlerta(false); }} />
-            <Contador label="🏪 Loja"   valor={contagensMotoboy.L} cor="text-teal-600"   bg="bg-teal-50   border-teal-200"   activeBg="bg-teal-600"   isActive={filtroMotoboy === "L"} onClick={() => { setFiltroMotoboy(filtroMotoboy === "L" ? "ALL" : "L"); setFiltroAlerta(false); }} />
-          </div>
-        </div>
-      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
@@ -166,6 +148,17 @@ export default function Esteira({ dias }: Props) {
             </button>
           )}
         </div>
+        <select
+          value={filtroMotoboy}
+          onChange={(e) => setFiltroMotoboy(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400 bg-white"
+        >
+          <option value="ALL">Expedição — Todos</option>
+          <option value="V">🛵 Vini</option>
+          <option value="A">🛵 Aldrin</option>
+          <option value="L">🏪 Loja</option>
+          <option value="OUTROS">Outros</option>
+        </select>
         {filiais.length > 1 && (
           <select
             value={filtroFilial}
