@@ -1,5 +1,5 @@
 export type Situacao = "CF" | "AT" | "BA" | "PO" | "?";
-export type Turno = "manha" | "tarde" | "semhorario";
+export type Turno = "entrega" | "azul" | "sedex" | "retirada" | "semhorario";
 
 export interface Receita {
   recId: string;
@@ -116,9 +116,11 @@ export function parseCSV(text: string): Receita[] {
 }
 
 export function classificarTurno(hora: number): Turno {
-  if (hora === 0) return "semhorario";
-  if (hora <= 12) return "manha";
-  return "tarde";
+  if (hora === 8)  return "entrega";
+  if (hora === 11) return "azul";
+  if (hora === 12) return "sedex";
+  if (hora === 14) return "retirada";
+  return "semhorario";
 }
 
 function horasDesde(data: string, hora: string): number | null {
@@ -218,8 +220,10 @@ export function groupPorDia(grupos: ReceitaGroup[], hoje: string): DiaGroup[] {
 
     // Agrupa por turno dentro do dia
     const porTurno = new Map<Turno, ReceitaGroup[]>([
-      ["manha", []],
-      ["tarde", []],
+      ["entrega",    []],
+      ["azul",       []],
+      ["sedex",      []],
+      ["retirada",   []],
       ["semhorario", []],
     ]);
 
@@ -236,7 +240,7 @@ export function groupPorDia(grupos: ReceitaGroup[], hoje: string): DiaGroup[] {
       });
 
     const turnos: TurnoGroup[] = [];
-    for (const turno of ["manha", "tarde", "semhorario"] as Turno[]) {
+    for (const turno of ["entrega", "azul", "sedex", "retirada", "semhorario"] as Turno[]) {
       const lista = porTurno.get(turno)!;
       if (lista.length > 0) {
         turnos.push({ turno, receitas: ordenarUrgencia(lista) });
@@ -383,13 +387,21 @@ export function situacaoClasses(s: Situacao): string {
 }
 
 export function turnoLabel(hora: number): string {
-  if (hora === 0) return "Sem horário";
-  if (hora <= 12) return `Manhã · ${hora}h`;
-  return `Tarde · ${hora}h`;
+  if (hora === 8)  return "Entrega · Motoboy";
+  if (hora === 11) return "Azul Cargo";
+  if (hora === 12) return "SEDEX";
+  if (hora === 14) return "Retirada no Balcão";
+  return "Sem horário";
 }
 
 export function turnoTitulo(turno: Turno): string {
-  return { manha: "Manhã", tarde: "Tarde", semhorario: "Sem horário definido" }[turno];
+  return {
+    entrega:    "Entrega · Motoboy",
+    azul:       "Azul Cargo",
+    sedex:      "SEDEX",
+    retirada:   "Retirada no Balcão",
+    semhorario: "Sem horário definido",
+  }[turno];
 }
 
 export function formatarData(data: string): string {

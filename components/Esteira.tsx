@@ -214,7 +214,13 @@ export default function Esteira({ dias }: Props) {
 }
 
 function TurnoCabecalho({ turno, total }: { turno: Turno; total: number }) {
-  const icon = turno === "manha" ? "🌅" : turno === "tarde" ? "🌇" : "⏳";
+  const icon = {
+    entrega:    "🛵",
+    azul:       "📦",
+    sedex:      "📮",
+    retirada:   "🏪",
+    semhorario: "⏳",
+  }[turno];
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-gray-500 font-medium">
