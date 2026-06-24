@@ -81,7 +81,7 @@ export function parseCSV(text: string): Receita[] {
         recSeq: parseInt(cols[1] ?? "0", 10),
         situacao: (SIT_MAP[sit] ?? "?") as Situacao,
         empId: parseInt(cols[3] ?? "0", 10),
-        empNome: (cols[18] ?? "").trim(),
+        empNome: (cols[18] ?? "").trim() || (cols[3]?.trim() === "1" ? "AMERICO" : cols[3]?.trim() === "2" ? "MOEMA" : "—"),
         cliente: (cols[4] ?? "").trim(),
         valor: parseFloat((cols[5] ?? "0").replace(",", ".")),
         dtaPrev: (cols[6] ?? "").trim(),
