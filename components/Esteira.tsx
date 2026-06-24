@@ -101,11 +101,11 @@ export default function Esteira({ dias }: Props) {
     <div className="space-y-5">
       {/* Contadores */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200" />
-        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200" />
-        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200" />
-        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" />
-        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" />
+        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200"  activeBg="bg-green-600"  isActive={filtroSit === "CF"}  onClick={() => { setFiltroSit(filtroSit === "CF" ? "ALL" : "CF"); setFiltroAlerta(false); }} />
+        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200"    activeBg="bg-red-600"    isActive={filtroSit === "AT"}  onClick={() => { setFiltroSit(filtroSit === "AT" ? "ALL" : "AT"); setFiltroAlerta(false); }} />
+        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200"   activeBg="bg-blue-600"   isActive={filtroSit === "BA"}  onClick={() => { setFiltroSit(filtroSit === "BA" ? "ALL" : "BA"); setFiltroAlerta(false); }} />
+        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); }} />
+        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); }} />
       </div>
 
       {/* Filtros */}
@@ -154,7 +154,11 @@ export default function Esteira({ dias }: Props) {
             {filiais.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         )}
-        <span className="text-gray-400 text-sm ml-auto">
+        <span className={`ml-auto text-sm font-semibold px-3 py-1 rounded-full border ${
+          filtroFilial === "AMERICO" ? "bg-violet-100 text-violet-700 border-violet-200" :
+          filtroFilial === "MOEMA"   ? "bg-teal-100 text-teal-700 border-teal-200" :
+                                       "bg-gray-600 text-white border-gray-600"
+        }`}>
           {totalFiltrado} receita{totalFiltrado !== 1 ? "s" : ""}
         </span>
       </div>
@@ -222,12 +226,18 @@ function TurnoCabecalho({ turno, total }: { turno: Turno; total: number }) {
   );
 }
 
-function Contador({ label, valor, cor, bg }: { label: string; valor: number; cor: string; bg: string }) {
+function Contador({ label, valor, cor, bg, activeBg, isActive, onClick }: {
+  label: string; valor: number; cor: string; bg: string; activeBg: string; isActive: boolean; onClick: () => void;
+}) {
   return (
-    <div className={`border rounded-xl px-4 py-3 shadow-sm ${bg}`}>
-      <p className="text-gray-500 text-xs font-medium">{label}</p>
-      <p className={`text-2xl font-bold ${cor}`}>{valor}</p>
-    </div>
+    <button
+      onClick={onClick}
+      className={`border rounded-xl px-4 py-3 shadow-sm text-left w-full transition-all cursor-pointer select-none
+        ${isActive ? `${activeBg} border-transparent` : `${bg} hover:brightness-95`}`}
+    >
+      <p className={`text-xs font-medium ${isActive ? "text-white/80" : "text-gray-500"}`}>{label}</p>
+      <p className={`text-2xl font-bold ${isActive ? "text-white" : cor}`}>{valor}</p>
+    </button>
   );
 }
 
