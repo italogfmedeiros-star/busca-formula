@@ -234,7 +234,7 @@ function FormulaProgresso({ formula }: { formula: import("@/lib/parser").Receita
             <div key={e} className="flex items-center gap-1 flex-1 min-w-0">
               <div
                 className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  done || etapa === "pronto"
+                  done
                     ? "bg-green-400"
                     : active
                     ? "bg-blue-400"
