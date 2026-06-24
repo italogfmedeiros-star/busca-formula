@@ -6,6 +6,7 @@ import {
   type ReceitaGroup,
   type Situacao,
   type Turno,
+  type Alerta,
   situacaoLabel,
   turnoLabel,
   turnoTitulo,
@@ -63,6 +64,7 @@ function situacaoLeftBar(s: Situacao): string {
 export default function Esteira({ dias }: Props) {
   const [filtroSit, setFiltroSit] = useState<Situacao | "ALL">("ALL");
   const [filtroFilial, setFiltroFilial] = useState("ALL");
+  const [filtroAlerta, setFiltroAlerta] = useState(false);
   const [busca, setBusca] = useState("");
 
   // Coleta totais e lista de filiais de todos os dias
@@ -76,10 +78,13 @@ export default function Esteira({ dias }: Props) {
     PO: todosGrupos.filter((g) => g.situacao === "PO").length,
   };
 
+  const totalEmRisco = todosGrupos.filter((g) => g.alertas.length > 0).length;
+
   function filtrar(grupos: ReceitaGroup[]): ReceitaGroup[] {
     return grupos.filter((g) => {
       if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
       if (filtroFilial !== "ALL" && g.empNome !== filtroFilial) return false;
+      if (filtroAlerta && g.alertas.length === 0) return false;
       if (busca) {
         const q = busca.toLowerCase();
         if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
@@ -95,11 +100,12 @@ export default function Esteira({ dias }: Props) {
   return (
     <div className="space-y-5">
       {/* Contadores */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200" />
         <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200" />
         <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200" />
         <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" />
+        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" />
       </div>
 
       {/* Filtros */}
@@ -125,6 +131,18 @@ export default function Esteira({ dias }: Props) {
               {s.label}
             </button>
           ))}
+          {totalEmRisco > 0 && (
+            <button
+              onClick={() => setFiltroAlerta(!filtroAlerta)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors font-medium
+                ${filtroAlerta
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "border-orange-300 text-orange-600 hover:border-orange-400 hover:bg-orange-50"
+                }`}
+            >
+              ⚠ Em risco ({totalEmRisco})
+            </button>
+          )}
         </div>
         {filiais.length > 1 && (
           <select
@@ -213,12 +231,26 @@ function Contador({ label, valor, cor, bg }: { label: string; valor: number; cor
   );
 }
 
+function alertaBadge(a: Alerta): { label: string; cls: string } {
+  if (a.tipo === "critica")     return { label: "Crítica", cls: "bg-red-600 text-white border-red-600" };
+  if (a.tipo === "em_risco")    return { label: "Em risco", cls: "bg-orange-500 text-white border-orange-500" };
+  if (a.tipo === "conf_parada") return {
+    label: `Conf. parada ${a.horasParado !== undefined ? a.horasParado.toFixed(0) + "h" : ""}`,
+    cls: "bg-amber-500 text-white border-amber-500",
+  };
+  return {
+    label: `Lab parado ${a.horasParado !== undefined ? a.horasParado.toFixed(0) + "h" : ""}`,
+    cls: "bg-amber-600 text-white border-amber-600",
+  };
+}
+
 function ReceitaCard({ grupo }: { grupo: ReceitaGroup }) {
   const [aberto, setAberto] = useState(false);
   const filialCls = FILIAL_CLASSES[grupo.empNome] ?? "bg-gray-100 text-gray-600";
+  const isCritica = grupo.alertas.some((a) => a.tipo === "critica");
 
   return (
-    <div className={`rounded-xl border shadow-sm overflow-hidden ${situacaoCardBorder(grupo.situacao)}`}>
+    <div className={`rounded-xl border shadow-sm overflow-hidden ${situacaoCardBorder(grupo.situacao)} ${isCritica ? "ring-4 ring-red-500 ring-offset-2 animate-pulse" : ""}`}>
       <div className="flex">
         <div className={`w-1 shrink-0 ${situacaoLeftBar(grupo.situacao)}`} />
         <div className="flex-1 min-w-0">
@@ -239,6 +271,14 @@ function ReceitaCard({ grupo }: { grupo: ReceitaGroup }) {
                     Sem início
                   </span>
                 )}
+                {grupo.alertas.map((a, i) => {
+                  const { label, cls } = alertaBadge(a);
+                  return (
+                    <span key={i} className={`text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>
+                      ⚠ {label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 

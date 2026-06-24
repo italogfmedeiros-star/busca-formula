@@ -25,6 +25,17 @@ export interface Receita {
   sit: string;
 }
 
+// Limites de tempo por etapa (em horas) — FICTÍCIOS, validar com gestor
+export const LIMITE_CONF_H  = 2;
+export const LIMITE_LAB_H   = 4;
+
+export type AlertaTipo = "conf_parada" | "lab_parado" | "em_risco" | "critica";
+
+export interface Alerta {
+  tipo: AlertaTipo;
+  horasParado?: number;
+}
+
 export interface ReceitaGroup {
   recId: string;
   cliente: string;
@@ -36,6 +47,7 @@ export interface ReceitaGroup {
   turno: Turno;
   situacao: Situacao;
   semInicio: boolean;
+  alertas: Alerta[];
   formulas: Receita[];
   totalValor: number;
 }
@@ -109,8 +121,15 @@ export function classificarTurno(hora: number): Turno {
   return "tarde";
 }
 
-export function groupReceitas(receitas: Receita[]): ReceitaGroup[] {
+function horasDesde(data: string, hora: string): number | null {
+  const dt = parseDatetime(data, hora);
+  if (!dt) return null;
+  return (Date.now() - dt.getTime()) / (1000 * 60 * 60);
+}
+
+export function groupReceitas(receitas: Receita[], hoje?: string): ReceitaGroup[] {
   const map = new Map<string, ReceitaGroup>();
+  const diaHoje = hoje ?? hojeCSV();
 
   for (const r of receitas) {
     if (!map.has(r.recId)) {
@@ -125,6 +144,7 @@ export function groupReceitas(receitas: Receita[]): ReceitaGroup[] {
         turno: classificarTurno(r.horaPrev),
         situacao: r.situacao,
         semInicio: false,
+        alertas: [],
         formulas: [],
         totalValor: 0,
       });
@@ -136,11 +156,44 @@ export function groupReceitas(receitas: Receita[]): ReceitaGroup[] {
 
   const grupos = Array.from(map.values());
 
-  // Marca receitas sem nenhuma etapa iniciada
   for (const g of grupos) {
     g.semInicio = g.formulas.every(
       (f) => !f.confData && !f.laborData && !f.balcaoData
     );
+
+    const alertas: Alerta[] = [];
+    const isHoje = g.dtaPrev === diaHoje;
+
+    // Receita crítica: entrega hoje e nenhuma fórmula chegou ao balcão
+    if (isHoje && g.formulas.every((f) => !f.balcaoData)) {
+      alertas.push({ tipo: "critica" });
+    }
+
+    // Receita em risco: entrega hoje e sem nenhuma etapa iniciada
+    if (isHoje && g.semInicio) {
+      alertas.push({ tipo: "em_risco" });
+    }
+
+    // Fórmulas paradas na conferência além do limite
+    for (const f of g.formulas) {
+      if (f.confData && !f.laborData) {
+        const horas = horasDesde(f.confData, f.confHora);
+        if (horas !== null && horas > LIMITE_CONF_H) {
+          alertas.push({ tipo: "conf_parada", horasParado: horas });
+          break;
+        }
+      }
+      // Fórmulas paradas no laboratório além do limite
+      if (f.laborData && !f.balcaoData) {
+        const horas = horasDesde(f.laborData, f.laborHora);
+        if (horas !== null && horas > LIMITE_LAB_H) {
+          alertas.push({ tipo: "lab_parado", horasParado: horas });
+          break;
+        }
+      }
+    }
+
+    g.alertas = alertas;
   }
 
   return grupos;
@@ -251,7 +304,7 @@ export function calcularIndicadores(grupos: ReceitaGroup[]): Indicadores {
   if (maxParada > 0) {
     const etapa =
       paradas.entrada === maxParada ? "Aguardando Conferência" :
-      paradas.conf    === maxParada ? "Aguardando Laboratório" :
+      paradas.conf    === maxParada ? "Em Laboratório" :
                                       "Aguardando Balcão";
     gargalo = { etapa, quantidade: maxParada };
   }
