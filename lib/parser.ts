@@ -20,6 +20,7 @@ export interface Receita {
   balcaoData: string;
   balcaoHora: string;
   usrBal: string;
+  localArmz: string;
   vendedor: string;
   telefone: string;
   sit: string;
@@ -50,6 +51,14 @@ export interface ReceitaGroup {
   alertas: Alerta[];
   formulas: Receita[];
   totalValor: number;
+  motoboys: string[];
+}
+
+export function motoboyLabel(localArmz: string): string | null {
+  if (localArmz === "V") return "Vini";
+  if (localArmz === "A") return "Aldrin";
+  if (localArmz === "L") return "Loja";
+  return null;
 }
 
 export interface TurnoGroup {
@@ -107,6 +116,7 @@ export function parseCSV(text: string): Receita[] {
         balcaoData: (cols[14] ?? "").trim(),
         balcaoHora: (cols[15] ?? "").trim(),
         usrBal: (cols[16] ?? "").trim(),
+        localArmz: (cols[17] ?? "").trim().toUpperCase(),
         vendedor: (cols[19] ?? "").trim(),
         telefone: (cols[20] ?? "").trim(),
         sit,
@@ -149,6 +159,7 @@ export function groupReceitas(receitas: Receita[], hoje?: string): ReceitaGroup[
         alertas: [],
         formulas: [],
         totalValor: 0,
+        motoboys: [],
       });
     }
     const g = map.get(r.recId)!;
@@ -162,6 +173,12 @@ export function groupReceitas(receitas: Receita[], hoje?: string): ReceitaGroup[
     g.semInicio = g.formulas.every(
       (f) => !f.confData && !f.laborData && !f.balcaoData
     );
+
+    g.motoboys = [...new Set(
+      g.formulas
+        .map((f) => f.localArmz)
+        .filter((v) => v === "V" || v === "A" || v === "L")
+    )];
 
     const alertas: Alerta[] = [];
     const isHoje = g.dtaPrev === diaHoje;

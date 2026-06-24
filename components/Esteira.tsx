@@ -12,6 +12,7 @@ import {
   turnoTitulo,
   formatarData,
   etapaAtual,
+  motoboyLabel,
 } from "@/lib/parser";
 
 interface Props {
@@ -304,6 +305,11 @@ function ReceitaCard({ grupo }: { grupo: ReceitaGroup }) {
               </span>
               <span>👤 {grupo.vendedor || "—"}</span>
               <span>🕐 {turnoLabel(grupo.horaPrev)}</span>
+              {grupo.motoboys.map((m) => (
+                <span key={m} className="px-1.5 py-0.5 rounded font-medium text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {m === "L" ? "🏪" : "🛵"} {motoboyLabel(m)}
+                </span>
+              ))}
               <span className="text-gray-700 font-semibold ml-auto">
                 R$ {grupo.totalValor.toFixed(2).replace(".", ",")}
               </span>
@@ -375,7 +381,9 @@ function FormulaProgresso({ formula }: { formula: import("@/lib/parser").Receita
         })}
       </div>
       <p className="text-xs text-gray-400 mt-0.5">
-        {etapa === "pronto"   ? "✓ No balcão"
+        {etapa === "pronto"   ? (motoboyLabel(formula.localArmz)
+            ? `✓ ${formula.localArmz === "L" ? "🏪" : "🛵"} ${motoboyLabel(formula.localArmz)}`
+            : "✓ No balcão")
         : etapa === "balcao"  ? "Aguardando balcão"
         : etapa === "lab"     ? "Em laboratório"
         : etapa === "conf"    ? "Aguardando conferência"

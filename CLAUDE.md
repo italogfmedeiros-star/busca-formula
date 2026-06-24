@@ -73,7 +73,7 @@ Relatório **"Controle Interno"** exportado do ERP em formato CSV.
 | `CLI_FONE1` | Telefone do cliente |
 | `REC_DTA_PREV` / `REC_HORA_PREV` | Data/turno secundário de previsão (M=Manhã, T=Tarde) |
 | `SIT` | Situação em texto: CF, AT, BA, PO |
-| `REC_LOCAL_ARMZ` | Local de armazenamento — **não utilizado** |
+| `REC_LOCAL_ARMZ` | **Despacho/Expedição**: quem está com a fórmula — `V`=Vini (motoboy), `A`=Aldrin (motoboy), `L`=Loja (retirada). Outros valores ou vazio = não despachado. |
 | `PLAN_DTA` / `PLAN_RESOL` | Planilha de ocorrência — **não utilizado** |
 
 ### Situações
