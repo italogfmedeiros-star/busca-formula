@@ -58,9 +58,25 @@ export default function Home() {
     }
   }, []);
 
-  // Tenta carregar da API ao iniciar
+  // Tenta carregar da API ao iniciar; se indisponível, restaura último CSV do localStorage
   useEffect(() => {
     carregarDaAPI();
+
+    try {
+      const savedText = localStorage.getItem("busca-formula-csv");
+      const savedName = localStorage.getItem("busca-formula-filename");
+      if (savedText && savedName) {
+        const receitas = parseCSV(savedText);
+        const grupos = groupReceitas(receitas);
+        setDias(groupPorDia(grupos, hojeCSV()));
+        setIndicadores(calcularIndicadores(grupos));
+        setTotal(receitas.length);
+        setFileName(savedName);
+        setView((v) => (v === "upload" ? "dashboard" : v));
+      }
+    } catch {
+      // dado corrompido no localStorage — ignora
+    }
   }, [carregarDaAPI]);
 
   // Polling a cada 30s quando o watcher está ativo
@@ -89,6 +105,8 @@ export default function Home() {
         setFileName(file.name);
         setExportedAt(null);
         setView("dashboard");
+        localStorage.setItem("busca-formula-csv", text);
+        localStorage.setItem("busca-formula-filename", file.name);
       } catch {
         setError("Erro ao processar o arquivo. Verifique se é um CSV exportado pelo ERP.");
       }
