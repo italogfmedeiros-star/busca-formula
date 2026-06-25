@@ -83,13 +83,6 @@ export default function Esteira({ dias }: Props) {
   const todosGrupos = dias.flatMap((d) => d.turnos.flatMap((t) => t.receitas));
   const filiais = Array.from(new Set(todosGrupos.map((g) => g.empNome).filter(Boolean))).sort();
 
-  const contagens = {
-    CF: todosGrupos.filter((g) => g.situacao === "CF").length,
-    AT: todosGrupos.filter((g) => g.situacao === "AT").length,
-    BA: todosGrupos.filter((g) => g.situacao === "BA").length,
-    PO: todosGrupos.filter((g) => g.situacao === "PO").length,
-  };
-
   const totalEmRisco = todosGrupos.filter((g) => g.alertas.length > 0).length;
 
   const contagensFluxo = {
@@ -121,15 +114,6 @@ export default function Esteira({ dias }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Contadores de situação */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Contador label="Conforme"        valor={contagens.CF} cor="text-green-600"  bg="bg-green-50  border-green-200"  activeBg="bg-green-600"  isActive={filtroSit === "CF"}  onClick={() => { setFiltroSit(filtroSit === "CF" ? "ALL" : "CF"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
-        <Contador label="Atraso"          valor={contagens.AT} cor="text-red-600"    bg="bg-red-50    border-red-200"    activeBg="bg-red-600"    isActive={filtroSit === "AT"}  onClick={() => { setFiltroSit(filtroSit === "AT" ? "ALL" : "AT"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
-        <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200"   activeBg="bg-blue-600"   isActive={filtroSit === "BA"}  onClick={() => { setFiltroSit(filtroSit === "BA" ? "ALL" : "BA"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
-        <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
-        <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); setFiltroMotoboy("ALL"); }} />
-      </div>
-
       {/* Fluxo de Produção */}
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Fluxo de Produção</p>
