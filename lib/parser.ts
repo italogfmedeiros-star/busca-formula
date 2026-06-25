@@ -9,7 +9,9 @@ export interface Receita {
   empNome: string;
   cliente: string;
   valor: number;
+  dtaEnt: string;
   dtaPrev: string;
+  prevPeriodo: string;
   horaPrev: number;
   confData: string;
   confHora: string;
@@ -26,9 +28,9 @@ export interface Receita {
   sit: string;
 }
 
-// Limites de tempo por etapa (em horas) — FICTÍCIOS, validar com gestor
-export const LIMITE_CONF_H  = 2;
-export const LIMITE_LAB_H   = 4;
+// Limites de tempo por etapa (em horas)
+export const LIMITE_CONF_H  = 6;
+export const LIMITE_LAB_H   = 6;
 
 export type AlertaTipo = "conf_parada" | "lab_parado" | "em_risco" | "critica";
 
@@ -105,8 +107,10 @@ export function parseCSV(text: string): Receita[] {
         empNome: (cols[18] ?? "").trim() || (cols[3]?.trim() === "1" ? "AMERICO" : cols[3]?.trim() === "2" ? "MOEMA" : "—"),
         cliente: (cols[4] ?? "").trim(),
         valor: parseFloat((cols[5] ?? "0").replace(",", ".")),
-        dtaPrev: (cols[6] ?? "").trim(),
+        dtaEnt: (cols[6] ?? "").trim(),
         horaPrev: parseInt(cols[7] ?? "0", 10),
+        dtaPrev: (cols[21] ?? "").trim(),
+        prevPeriodo: (cols[22] ?? "").trim(),
         confData: (cols[8] ?? "").trim(),
         confHora: (cols[9] ?? "").trim(),
         usrConf: (cols[10] ?? "").trim(),
