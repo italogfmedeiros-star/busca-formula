@@ -27,8 +27,8 @@ export interface Receita {
 }
 
 // Limites de tempo por etapa (em horas)
-export const LIMITE_CONF_H  = 6;
-export const LIMITE_LAB_H   = 6;
+export const LIMITE_CONF_H  = 10;
+export const LIMITE_LAB_H   = 15;
 
 export type AlertaTipo = "conf_parada" | "lab_parado" | "em_risco" | "critica";
 
