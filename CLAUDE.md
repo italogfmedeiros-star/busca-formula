@@ -63,7 +63,7 @@ Relatório **"Controle Interno"** exportado do ERP em formato CSV.
 | `REC_EMP_ID` | ID da filial (1=AMERICO, 2=MOEMA) |
 | `CLI_RAZAO` | Nome do cliente |
 | `REC_VL_FINAL` | Valor da fórmula em R$ |
-| `REC_DTA_ENT` | Data de entrada/entrega real (`dtaEnt`) — lida mas não usada para agrupamento |
+| `REC_DTA_ENT` | **Data de previsão de entrega** (`dtaPrev`) — usada para agrupamento por dia e alerta "isHoje" |
 | `REC_HORA_ENT` | **Modal de expedição** (`horaPrev`): 8=Entrega Motoboy, 11=Azul Cargo, 12=SEDEX, 14=Retirada no Balcão, 0=Sem horário |
 | `CONF` / `CONF_HORA` / `USR_CONF` | Conferência Farmacêutica: data, hora, responsável |
 | `LABOR` / `LAB_HORA` / `USR_LAB` | Laboratório: data, hora, responsável |
@@ -71,8 +71,7 @@ Relatório **"Controle Interno"** exportado do ERP em formato CSV.
 | `EMP_NOME` | Nome da filial (AMERICO ou MOEMA) |
 | `VEND` | Vendedor/atendente |
 | `CLI_FONE1` | Telefone do cliente |
-| `REC_DTA_PREV` | **Data de previsão de entrega** (`dtaPrev`) — usada para agrupamento por dia e alerta "isHoje" |
-| `REC_HORA_PREV` | Período de previsão (`prevPeriodo`): M=Manhã, T=Tarde |
+| `REC_DTA_PREV` / `REC_HORA_PREV` | **não utilizados** |
 | `SIT` | Situação em texto: CF, AT, BA, PO |
 | `REC_LOCAL_ARMZ` | **Despacho/Expedição**: quem está com a fórmula — `V`=Vini (motoboy), `A`=Aldrin (motoboy), `L`=Loja (retirada). Outros valores ou vazio = não despachado. |
 | `PLAN_DTA` / `PLAN_RESOL` | Planilha de ocorrência — **não utilizado** |
