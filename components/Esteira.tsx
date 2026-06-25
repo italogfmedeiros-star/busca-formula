@@ -62,11 +62,21 @@ function situacaoLeftBar(s: Situacao): string {
   }[s];
 }
 
+type EtapaFluxo = "conferencia" | "producao" | "expedicao" | "finalizado";
+
+function etapaFluxo(g: ReceitaGroup): EtapaFluxo {
+  if (g.formulas.some((f) => f.balcaoData)) return "finalizado";
+  if (g.formulas.some((f) => f.laborData))  return "expedicao";
+  if (g.formulas.some((f) => f.confData))   return "producao";
+  return "conferencia";
+}
+
 export default function Esteira({ dias }: Props) {
   const [filtroSit, setFiltroSit] = useState<Situacao | "ALL">("ALL");
   const [filtroFilial, setFiltroFilial] = useState("ALL");
   const [filtroAlerta, setFiltroAlerta] = useState(false);
   const [filtroMotoboy, setFiltroMotoboy] = useState("ALL");
+  const [filtroEtapa, setFiltroEtapa] = useState<EtapaFluxo | "ALL">("ALL");
   const [busca, setBusca] = useState("");
 
   // Coleta totais e lista de filiais de todos os dias
@@ -82,6 +92,13 @@ export default function Esteira({ dias }: Props) {
 
   const totalEmRisco = todosGrupos.filter((g) => g.alertas.length > 0).length;
 
+  const contagensFluxo = {
+    conferencia: todosGrupos.filter((g) => etapaFluxo(g) === "conferencia").length,
+    producao:    todosGrupos.filter((g) => etapaFluxo(g) === "producao").length,
+    expedicao:   todosGrupos.filter((g) => etapaFluxo(g) === "expedicao").length,
+    finalizado:  todosGrupos.filter((g) => etapaFluxo(g) === "finalizado").length,
+  };
+
   function filtrar(grupos: ReceitaGroup[]): ReceitaGroup[] {
     return grupos.filter((g) => {
       if (filtroSit !== "ALL" && g.situacao !== filtroSit) return false;
@@ -89,6 +106,7 @@ export default function Esteira({ dias }: Props) {
       if (filtroAlerta && g.alertas.length === 0) return false;
       if (filtroMotoboy === "OUTROS" && g.motoboys.length > 0) return false;
       if (filtroMotoboy !== "ALL" && filtroMotoboy !== "OUTROS" && !g.motoboys.includes(filtroMotoboy)) return false;
+      if (filtroEtapa !== "ALL" && etapaFluxo(g) !== filtroEtapa) return false;
       if (busca) {
         const q = busca.toLowerCase();
         if (!g.cliente.toLowerCase().includes(q) && !g.recId.includes(q)) return false;
@@ -110,6 +128,53 @@ export default function Esteira({ dias }: Props) {
         <Contador label="Balcão c/Atraso" valor={contagens.BA} cor="text-blue-600"   bg="bg-blue-50   border-blue-200"   activeBg="bg-blue-600"   isActive={filtroSit === "BA"}  onClick={() => { setFiltroSit(filtroSit === "BA" ? "ALL" : "BA"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
         <Contador label="Ocorrência"      valor={contagens.PO} cor="text-yellow-600" bg="bg-yellow-50 border-yellow-200" activeBg="bg-yellow-500" isActive={filtroSit === "PO"}  onClick={() => { setFiltroSit(filtroSit === "PO" ? "ALL" : "PO"); setFiltroAlerta(false); setFiltroMotoboy("ALL"); }} />
         <Contador label="Em risco / Alertas" valor={totalEmRisco} cor="text-orange-600" bg="bg-orange-50 border-orange-200" activeBg="bg-orange-500" isActive={filtroAlerta} onClick={() => { setFiltroAlerta(!filtroAlerta); setFiltroSit("ALL"); setFiltroMotoboy("ALL"); }} />
+      </div>
+
+      {/* Fluxo de Produção */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Fluxo de Produção</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ContadorFluxo
+            label="Em conferência"
+            valor={contagensFluxo.conferencia}
+            cor="text-slate-600"
+            bg="bg-slate-50 border-slate-200"
+            activeBg="bg-slate-600"
+            dot="bg-slate-400"
+            isActive={filtroEtapa === "conferencia"}
+            onClick={() => setFiltroEtapa(filtroEtapa === "conferencia" ? "ALL" : "conferencia")}
+          />
+          <ContadorFluxo
+            label="Em produção"
+            valor={contagensFluxo.producao}
+            cor="text-amber-600"
+            bg="bg-amber-50 border-amber-200"
+            activeBg="bg-amber-500"
+            dot="bg-amber-400"
+            isActive={filtroEtapa === "producao"}
+            onClick={() => setFiltroEtapa(filtroEtapa === "producao" ? "ALL" : "producao")}
+          />
+          <ContadorFluxo
+            label="Em expedição"
+            valor={contagensFluxo.expedicao}
+            cor="text-indigo-600"
+            bg="bg-indigo-50 border-indigo-200"
+            activeBg="bg-indigo-600"
+            dot="bg-indigo-400"
+            isActive={filtroEtapa === "expedicao"}
+            onClick={() => setFiltroEtapa(filtroEtapa === "expedicao" ? "ALL" : "expedicao")}
+          />
+          <ContadorFluxo
+            label="Finalizados"
+            valor={contagensFluxo.finalizado}
+            cor="text-emerald-600"
+            bg="bg-emerald-50 border-emerald-200"
+            activeBg="bg-emerald-600"
+            dot="bg-emerald-400"
+            isActive={filtroEtapa === "finalizado"}
+            onClick={() => setFiltroEtapa(filtroEtapa === "finalizado" ? "ALL" : "finalizado")}
+          />
+        </div>
       </div>
 
       {/* Filtros */}
@@ -257,6 +322,24 @@ function Contador({ label, valor, cor, bg, activeBg, isActive, onClick }: {
         ${isActive ? `${activeBg} border-transparent` : `${bg} hover:brightness-95`}`}
     >
       <p className={`text-xs font-medium ${isActive ? "text-white/80" : "text-gray-500"}`}>{label}</p>
+      <p className={`text-2xl font-bold ${isActive ? "text-white" : cor}`}>{valor}</p>
+    </button>
+  );
+}
+
+function ContadorFluxo({ label, valor, cor, bg, activeBg, dot, isActive, onClick }: {
+  label: string; valor: number; cor: string; bg: string; activeBg: string; dot: string; isActive: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`border rounded-xl px-4 py-3 shadow-sm text-left w-full transition-all cursor-pointer select-none
+        ${isActive ? `${activeBg} border-transparent` : `${bg} hover:brightness-95`}`}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-white/70" : dot}`} />
+        <p className={`text-xs font-medium ${isActive ? "text-white/80" : "text-gray-500"}`}>{label}</p>
+      </div>
       <p className={`text-2xl font-bold ${isActive ? "text-white" : cor}`}>{valor}</p>
     </button>
   );
