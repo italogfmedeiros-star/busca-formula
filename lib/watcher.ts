@@ -8,7 +8,13 @@ export interface CacheEntry {
   receitas: Receita[];
 }
 
-let cache: CacheEntry | null = null;
+// globalThis garante que o cache é compartilhado entre instrumentation.ts e API routes
+// mesmo que o Next.js carregue o módulo em instâncias separadas
+declare global {
+  // eslint-disable-next-line no-var
+  var _watcherCache: CacheEntry | null;
+}
+globalThis._watcherCache ??= null;
 
 // Extrai data/hora do nome: "Controle Interno_DDMMYYYYHHMMSS"
 export function parsearNomeArquivo(nome: string): Date | null {
@@ -31,12 +37,12 @@ function processarArquivo(filePath: string) {
   if (!exportedAt) return;
 
   // Ignora se já temos um arquivo mais recente em cache
-  if (cache && exportedAt <= cache.exportedAt) return;
+  if (globalThis._watcherCache && exportedAt <= globalThis._watcherCache.exportedAt) return;
 
   try {
     const text = fs.readFileSync(filePath, "latin1");
     const receitas = parseCSV(text);
-    cache = { fileName, exportedAt, receitas };
+    globalThis._watcherCache = { fileName, exportedAt, receitas };
     console.log(`[watcher] Novo relatório carregado: ${fileName} (${receitas.length} fórmulas)`);
   } catch (err) {
     console.error(`[watcher] Erro ao processar ${fileName}:`, err);
@@ -65,22 +71,27 @@ export function initWatcher() {
     console.error("[watcher] Erro ao ler pasta inicial:", err);
   }
 
-  // Inicia monitoramento contínuo
-  import("chokidar").then(({ default: chokidar }) => {
-    const padrao = path.join(pasta, "Controle Interno_*.csv");
-    const watcher = chokidar.watch(padrao, {
-      persistent: true,
-      ignoreInitial: true,
-      awaitWriteFinish: { stabilityThreshold: 1000, pollInterval: 200 },
-    });
+  // Verifica pasta a cada 15s procurando arquivo mais recente
+  const padrao = path.join(pasta, "Controle Interno_*.csv");
+  console.log(`[watcher] Monitorando: ${padrao}`);
 
-    watcher.on("add", (filePath: string) => processarArquivo(filePath));
-    watcher.on("change", (filePath: string) => processarArquivo(filePath));
+  setInterval(() => {
+    try {
+      const arquivos = fs.readdirSync(pasta)
+        .filter((f) => /^Controle Interno_\d{14}\.csv$/i.test(f))
+        .map((f) => ({ f, data: parsearNomeArquivo(f) }))
+        .filter((x): x is { f: string; data: Date } => x.data !== null)
+        .sort((a, b) => b.data.getTime() - a.data.getTime());
 
-    console.log(`[watcher] Monitorando: ${padrao}`);
-  });
+      if (arquivos.length > 0) {
+        processarArquivo(path.join(pasta, arquivos[0].f));
+      }
+    } catch (err) {
+      console.error("[watcher] Erro ao verificar pasta:", err);
+    }
+  }, 15_000);
 }
 
 export function getCache(): CacheEntry | null {
-  return cache;
+  return globalThis._watcherCache;
 }
