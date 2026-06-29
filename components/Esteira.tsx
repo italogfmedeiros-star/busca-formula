@@ -352,22 +352,22 @@ export default function Esteira({ dias }: Props) {
 }
 
 const TURNO_ICON: Record<Turno, React.ReactNode> = {
-  entrega:    <Motorcycle className="w-3.5 h-3.5" />,
-  azul:       <Package className="w-3.5 h-3.5" />,
-  sedex:      <Envelope className="w-3.5 h-3.5" />,
-  retirada:   <Storefront className="w-3.5 h-3.5" />,
-  semhorario: <Hourglass className="w-3.5 h-3.5" />,
+  entrega:    <Motorcycle className="w-6 h-6" />,
+  azul:       <Package className="w-6 h-6" />,
+  sedex:      <Envelope className="w-6 h-6" />,
+  retirada:   <Storefront className="w-6 h-6" />,
+  semhorario: <Hourglass className="w-6 h-6" />,
 };
 
 function TurnoCabecalho({ turno, total }: { turno: Turno; total: number }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-        <span className="text-gray-400">{TURNO_ICON[turno]}</span>
+    <div className="flex items-center gap-3 mb-1">
+      <span className="flex items-center gap-2 text-base font-semibold text-gray-700">
+        <span className="text-gray-500">{TURNO_ICON[turno]}</span>
         {turnoTitulo(turno)}
       </span>
-      <span className="text-xs text-gray-400">· {total} receita{total !== 1 ? "s" : ""}</span>
-      <div className="flex-1 h-px bg-gray-100" />
+      <span className="text-xs text-gray-400 font-normal">· {total} receita{total !== 1 ? "s" : ""}</span>
+      <div className="flex-1 h-px bg-gray-200" />
     </div>
   );
 }
